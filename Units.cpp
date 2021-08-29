@@ -22,9 +22,9 @@ using namespace GameCore;
 #define FIELD_WIDTH 200
 #define FIELD_HEIGHT 200
 
-#define DEBUG_MODE true
+#define DEBUG_MODE true   //если true, то визуализируются номера юнитов и их "сектора зрения" 
 
-const char* dataFileName = "data.txt";      //если у вас нет этого файла,  раскомментируйте и вызовите один раз GenerateDataFile (211 строка)
+const char* dataFileName = "data.txt";      //если у вас нет этого файла,  раскомментируйте и вызовите один раз GenerateDataFile (216 строка)
 const char* resultFileName = "result.txt";  //результат работы, согласно заданию
 
 int win_width;
@@ -49,6 +49,14 @@ void display()
     for (std::vector<Unit>::iterator i = unitList.begin(); i != unitList.end(); ++i)
     {
         i->Draw();
+    }
+
+    if (!mouseLBpressed && DEBUG_MODE)
+    {  
+        for (std::vector<Unit>::iterator i = unitList.begin(); i != unitList.end(); ++i)
+        {
+            i->DrawInfo();
+        }
     }
 
     glFlush();
@@ -103,8 +111,7 @@ void InitUnits(int unitsMaxCount = -1)
         Unit u(ind++, 
             Vec2(data[0], data[1]), 
             Vec2(data[2], data[3]));
-         
-        u.DebugMode(DEBUG_MODE); 
+          
         unitList.push_back(u); 
 
         if (unitsMaxCount-- == 0)
@@ -205,11 +212,10 @@ void on_resize(int w, int h)
 int main(int argc, char** argv)
 {
     std::cout << "Test Units!\n";
-      
-    // game init
-
+       
     //GenerateDataFile();  
 
+    // game init 
     InitUnits(MAX_UNITS_COUNT);
     cellManager.Init(FIELD_WIDTH, FIELD_HEIGHT, 20);
     cellManager.Update(unitList);

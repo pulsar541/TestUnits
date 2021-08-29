@@ -21,8 +21,7 @@ namespace GameCore
 
         int _selfIndex;
         Vec2 _position;
-        float _directionAngle;
-        bool _drawViewSectors;
+        float _directionAngle; 
 
         Vec2 _startViewSector;
         Vec2 _endViewSector;
@@ -33,6 +32,7 @@ namespace GameCore
     public:
         Unit(int index, Vec2 position, Vec2 direction = Vec2(1, 0));
         void Draw();
+        void DrawInfo();
         void Update(); 
         int GetIndex();
         Vec2 GetCoord();
