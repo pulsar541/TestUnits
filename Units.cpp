@@ -17,7 +17,7 @@ using namespace GameCore;
 #define WINDOW_WIDTH  1280
 #define WINDOW_HEIGHT 768
 
-#define MAX_UNITS_COUNT 5000
+#define MAX_UNITS_COUNT 10000
 #define SCENE_SCALE  30
 #define FIELD_WIDTH 200
 #define FIELD_HEIGHT 200
