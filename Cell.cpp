@@ -7,11 +7,11 @@ namespace GameCore
 	{
 		unitsIndexes.push_back(index);
 	}
-
-	void Cell::RemoveIndex(int index)
+	void Cell::ClearIndexes()
 	{
-		unitsIndexes.remove(index);
+		unitsIndexes.clear();
 	}
+
 
 	CellManager::CellManager()
 	{ 
@@ -32,7 +32,7 @@ namespace GameCore
 		for (int i = 0; i < I; i++) {
 			int J = _cells.at(i).size();
 			for (int j = 0; j < J; j++) {
-				_cells.at(i).at(j).unitsIndexes.clear();
+				_cells.at(i).at(j).ClearIndexes();
 			}
 			_cells.at(i).clear();
 		}
@@ -69,7 +69,7 @@ namespace GameCore
 			if (j > count_j - 1)
 				j = count_j - 1;
 
-			_cells.at(i).at(j).unitsIndexes.push_back(u->GetIndex());
+			_cells.at(i).at(j).AddIndex(u->GetIndex());
 		}
 
 	}

@@ -10,7 +10,7 @@ namespace GameCore
 	{
 		std::list<int> unitsIndexes;
 		void AddIndex(int index);
-		void RemoveIndex(int index);
+		void ClearIndexes();
 	};
 
 	class CellManager
