@@ -4,6 +4,9 @@
 
 namespace GameMath
 {
+    #define PI 3.14159265358979323846f
+    #define PIo180 0.01745329251f
+
     float Q_rsqrt(float number) //invert fast sqrt
     {
         const float x2 = number * 0.5F;
@@ -43,6 +46,7 @@ namespace GameMath
         this->y -= c.y;
         return *this;
     }
+     
 
     Vec2& Vec2::normalize()
     {
@@ -51,5 +55,33 @@ namespace GameMath
         this->y *= inv_magnitude;
         return *this;
     } 
+     
+    int dotProduct(Vec2& v1, Vec2& v2)
+    { 
+        return v1.x * v2.x + v1.y * v2.y;
+    }
+
+    bool areClockwise(Vec2& v1, Vec2& v2)
+    {
+        return -v1.x * v2.y + v1.y * v2.x > 0;
+    }
+
+    bool isWithinRadius(Vec2 &v, float radiusSquared)
+    {
+        return v.x * v.x + v.y * v.y <= radiusSquared;
+    }
+
+    bool isInsideSector(Vec2& point, Vec2& center, Vec2& sectorStart, Vec2& sectorEnd, float radiusSquared)
+    {
+        Vec2 relPoint (point.x - center.x, point.y - center.y); 
+        return areClockwise(sectorStart, relPoint) &&
+            !areClockwise(sectorEnd, relPoint) &&
+            isWithinRadius(relPoint, radiusSquared);
+    }
+
+    float squareDist(const Vec2& v1, const Vec2& v2) 
+    {
+        return (v1.x - v2.x) * (v1.x - v2.x) + (v1.y - v2.y) * (v1.y - v2.y);
+    }
 
 }

@@ -7,54 +7,45 @@
 #include <fstream>
 #include <sstream>
 #include <random>
+#include <thread>
 
 #include "Unit.h"
 #include "Cell.h"
  
 using namespace GameCore;
-
-#define PI 3.14159265358979323846f
-#define PIo180 0.01745329251f
-
-
+ 
 #define WINDOW_WIDTH  1280
 #define WINDOW_HEIGHT 768
-#define SCENE_SCALE  10
 
-const char* dataFileName = "data.txt";
+#define MAX_UNITS_COUNT 5000
+#define SCENE_SCALE  30
+#define FIELD_WIDTH 200
+#define FIELD_HEIGHT 200
+
+#define DEBUG_MODE true
+
+const char* dataFileName = "data.txt";      //если у вас нет этого файла,  раскомментируйте и вызовите один раз GenerateDataFile (211 строка)
+const char* resultFileName = "result.txt";  //результат работы, согласно заданию
 
 int win_width;
 int win_height;
 int WinFar = 10; 
+bool mouseLBpressed = false;
+float oldMouseX;
+float oldMouseY;
+Vec2 sceneOffset;
  
-std::vector<Unit> unitList;   
-std::map<long, Cell> gameField;
-
-
-void updateFieldCells()
-{ 
-    while (1)
-    {
-        for (std::vector<Unit>::iterator i = unitList.begin(); i != unitList.end(); ++i)
-        {
-            Vec2 unitCoord = i->GetCoord();
-            Cell cell;
-            cell.AddIndex(i->GetIndex()); 
-            long key = (int)unitCoord.x * (int)unitCoord.y + (int)unitCoord.x;
-            gameField.insert(std::pair<long, Cell>(key,cell));  
-        }
-        Sleep(500);
-    }
-}
+std::vector<Unit> unitList;    
+CellManager cellManager;
 
 
 void display()
 {
     glClear(GL_COLOR_BUFFER_BIT);
-    glLoadIdentity();
-    glScalef(SCENE_SCALE, SCENE_SCALE, 1);
+    glLoadIdentity(); 
+    glTranslatef(sceneOffset.x, sceneOffset.y, 1); 
+    glScalef(SCENE_SCALE, SCENE_SCALE, 1); 
     
-    //DrawPoint(0, 0); 
     for (std::vector<Unit>::iterator i = unitList.begin(); i != unitList.end(); ++i)
     {
         i->Draw();
@@ -69,9 +60,9 @@ void GenerateDataFile()
      std::string buffer;
      std::random_device rd;
      std::mt19937 mt(rd());
-     std::uniform_real_distribution<double> randd(-100.0, 100.0);
+     std::uniform_real_distribution<double> randd(-FIELD_WIDTH/2, FIELD_WIDTH/2);
 
-     for (int c = 0; c < 10000; c++)
+     for (int c = 0; c < MAX_UNITS_COUNT; c++)
      { 
          std::ostringstream ss;
          float x = randd(mt);
@@ -88,16 +79,13 @@ void GenerateDataFile()
 
 void InitUnits(int unitsMaxCount = -1)
 {   
-    //GenerateDataFile();
-
     std::string buffer;
 
     std::ifstream f(dataFileName);
     f.seekg(0, std::ios::end);
     buffer.resize(f.tellg());
     f.seekg(0);
-    f.read((char *)buffer.data(), buffer.size());
-
+    f.read((char *)buffer.data(), buffer.size()); 
 
     std::istringstream is(buffer);
     std::string line;
@@ -112,13 +100,93 @@ void InitUnits(int unitsMaxCount = -1)
             ss >> data[i];
         }
 
-        Unit u(ind++, data[0], data[1], Vec2(data[2], data[3]));
-        unitList.push_back(u);
+        Unit u(ind++, 
+            Vec2(data[0], data[1]), 
+            Vec2(data[2], data[3]));
+         
+        u.DebugMode(DEBUG_MODE); 
+        unitList.push_back(u); 
 
         if (unitsMaxCount-- == 0)
             break;
           
     } 
+}
+
+
+
+void TaskUpdateUnitsInfo(bool saveToFile = false, const char* resultFilename = "")
+{ 
+     
+    for (std::vector<Unit>::iterator i = unitList.begin(); i != unitList.end(); ++i)
+    { 
+        Vec2 center = i->GetCoord();
+        Vec2 sectorStart= i->GetStartViewSector();
+        Vec2 sectorEnd = i->GetEndViewSector();
+        float radiusSquared = i->GetViewDistance() * i->GetViewDistance();
+
+        Cell* tmpCell = cellManager.GetCellByPosition(i->GetCoord());
+        if (tmpCell != nullptr)
+        {  
+            int detectedAliensCount = 0;
+            for (std::list<int>::iterator n = tmpCell->unitsIndexes.begin(); n != tmpCell->unitsIndexes.end(); ++n)
+            { 
+                if (unitList.at(*n).GetIndex() == i->GetIndex())
+                    continue; 
+
+
+                Vec2 point = unitList.at(*n).GetCoord();
+                bool isInside = isInsideSector(point, center, sectorStart, sectorEnd, radiusSquared);  
+
+                if (isInside)
+                {
+                    detectedAliensCount++;
+                }
+            }
+            i->SetDetectedAliensCount(detectedAliensCount);
+        }
+    }  
+
+    if (saveToFile)
+    { 
+        std::string buffer; 
+        for (std::vector<Unit>::iterator i = unitList.begin(); i != unitList.end(); ++i)
+        {
+            std::ostringstream ss; 
+            ss << "Unit " << i->GetIndex() << " sees " << i->GetDetectedAliensCount() << std::endl;
+            buffer += ss.str();
+            ss.clear();
+        }
+        std::ofstream fo(resultFilename);
+        fo.write(buffer.data(), buffer.size()); 
+    }
+
+}
+
+
+void on_mouse(int button, int state, int x, int y)
+{  
+    if (button == GLUT_LEFT_BUTTON)
+    {
+        mouseLBpressed = (state == GLUT_DOWN);
+    }
+
+    else if (button == GLUT_RIGHT_BUTTON)
+    { 
+        mouseLBpressed = (state == GLUT_DOWN);
+    }
+     
+    oldMouseX = x;
+    oldMouseY = y;
+}
+
+void on_mouseMove(int mx, int my)
+{
+    sceneOffset.x += (mx - oldMouseX);
+    sceneOffset.y -= (my - oldMouseY); 
+    oldMouseX = mx;
+    oldMouseY = my;
+    glutPostRedisplay();  
 }
 
 void on_resize(int w, int h)
@@ -139,8 +207,16 @@ int main(int argc, char** argv)
     std::cout << "Test Units!\n";
       
     // game init
-    InitUnits(5000);
 
+    //GenerateDataFile();  
+
+    InitUnits(MAX_UNITS_COUNT);
+    cellManager.Init(FIELD_WIDTH, FIELD_HEIGHT, 20);
+    cellManager.Update(unitList);
+    cellManager.PrintToFile("cells.txt"); //debug info about cells
+     
+    std::thread t1(TaskUpdateUnitsInfo, true, resultFileName);
+      
     // gl init
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
@@ -151,18 +227,9 @@ int main(int argc, char** argv)
     glClearColor(0, 0, 0, 1.0); 
     glutDisplayFunc(display);
     glutReshapeFunc(on_resize);
+    glutMouseFunc(on_mouse);
+    glutMotionFunc(on_mouseMove); 
 
     glutMainLoop();
     return 0;
 }
-
-// Запуск программы: CTRL+F5 или меню "Отладка" > "Запуск без отладки"
-// Отладка программы: F5 или меню "Отладка" > "Запустить отладку"
-
-// Советы по началу работы 
-//   1. В окне обозревателя решений можно добавлять файлы и управлять ими.
-//   2. В окне Team Explorer можно подключиться к системе управления версиями.
-//   3. В окне "Выходные данные" можно просматривать выходные данные сборки и другие сообщения.
-//   4. В окне "Список ошибок" можно просматривать ошибки.
-//   5. Последовательно выберите пункты меню "Проект" > "Добавить новый элемент", чтобы создать файлы кода, или "Проект" > "Добавить существующий элемент", чтобы добавить в проект существующие файлы кода.
-//   6. Чтобы снова открыть этот проект позже, выберите пункты меню "Файл" > "Открыть" > "Проект" и выберите SLN-файл.
